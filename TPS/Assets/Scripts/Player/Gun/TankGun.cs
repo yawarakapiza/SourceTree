@@ -1,0 +1,69 @@
+using System.Collections;
+using System.Collections.Generic;
+using UnityEngine;
+using UnityEngine.UI;
+
+public class TankGun : Player
+{
+    public GameObject BulletPrefab; // 生成する弾オブジェクトのプレハブ
+    public GameObject bulletSpawnPoint; // 弾を生成する位置のオブジェクト
+    public float fireRate = 0.5f; // 発射レート
+    public float bulletSpeed = 10f; // 弾の速度
+    public Vector3 mouseOffset = new Vector3(20, 20, 0); // マウス位置からのオフセット
+    public float spreadAngle = 5f; // 発射のばらつき角度
+    public ParticleSystem muzzleFlash; // マズルフラッシュのパーティクルシステム
+    public Text ammoText; // 弾薬数を表示するUIText
+
+    private float nextFireTime = 0f; // 次に発射可能な時間
+    //private int currentAmmo = 100; // 現在の弾薬数
+
+    protected override void Update()
+    {
+        Vector3 mousePosition = Input.mousePosition + mouseOffset;
+        Vector3 worldMousePosition = Camera.main.ScreenToWorldPoint(new Vector3(mousePosition.x, mousePosition.y, Camera.main.transform.position.y));
+        worldMousePosition.y = transform.position.y;
+        transform.rotation = Quaternion.LookRotation(worldMousePosition - transform.position);
+
+        if (Input.GetMouseButton(0) && Time.time >= nextFireTime && !barrierActive)
+        {
+            Fire();
+        }
+        else if (!Input.GetMouseButton(0) && muzzleFlash.isPlaying)
+        {
+            muzzleFlash.Stop();
+        }
+    }
+
+    void Fire()
+    {
+        Vector3 spawnPoint = bulletSpawnPoint.transform.position;
+        Quaternion spreadRotation = Quaternion.Euler(Random.Range(-spreadAngle, spreadAngle), Random.Range(-spreadAngle, spreadAngle), 0);
+        Quaternion bulletRotation = transform.rotation * spreadRotation;
+        GameObject bullet = Instantiate(BulletPrefab, spawnPoint, bulletRotation);
+
+        Rigidbody bulletRigidbody = bullet.GetComponent<Rigidbody>();
+        if (bulletRigidbody != null)
+        {
+            bulletRigidbody.velocity = bullet.transform.forward * bulletSpeed;
+            AudioManager.Instance.PlaySE(SESoundData.SE.Gun0);
+        }
+
+        if (!muzzleFlash.isPlaying)
+        {
+            muzzleFlash.Play();
+        }
+
+        nextFireTime = Time.time + 1f / fireRate;
+        //currentAmmo--; // 弾薬を減少
+        UpdateAmmoText(); // 弾薬数を更新
+    }
+
+    //弾薬数を更新するメソッド
+    void UpdateAmmoText()
+    {
+        if (ammoText != null)
+        {
+            ammoText.text = "Ammo: ∞";
+        }
+    }
+}
